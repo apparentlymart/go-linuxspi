@@ -8,6 +8,19 @@ import (
 	"fmt"
 	"github.com/apparentlymart/go-spi/spi"
 	"os"
+	"syscall"
+	"unsafe"
+)
+
+const (
+	// Defining these here rather than referencing linux/spidev/spidev.h
+	// because cgo breaks cross-compilation and cross-compilation is very
+	// useful for embedded systems.
+	// This will break if the ioctl numbers change in a future version of
+	// Linux.
+	ioctlWriteMode        uintptr = 0x40016b01
+	ioctlWriteBitsPerWord uintptr = 0x40016b03
+	ioctlWriteMaxSpeed    uintptr = 0x40046b04
 )
 
 type spiDev struct {
@@ -43,4 +56,11 @@ func (dev spiDev) SetBitOrder(order spi.BitOrder) error {
 
 func (dev spiDev) SetMode(mode spi.Mode) error {
 	return nil
+}
+
+func (dev spiDev) SetMaxSpeedHz(speed uint32) error {
+	fmt.Println("Set max speed to", speed)
+	file := dev.File
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, file.Fd(), ioctlWriteMaxSpeed, uintptr(unsafe.Pointer(&speed)))
+	return err
 }
